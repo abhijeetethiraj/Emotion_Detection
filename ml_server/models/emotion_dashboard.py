@@ -225,14 +225,22 @@ async def handle_client(websocket):
 # ========================================
 # HEALTH CHECK ENDPOINT (HTTP)
 # ========================================
-async def health_check(path, request_headers):
+# ========================================
+# HEALTH CHECK ENDPOINT (HTTP)
+# ========================================
+async def health_check(connection, request):
     """
-    Simple HTTP health check for Render
+    HTTP health check handler for Render (handles GET and HEAD)
     """
-    if path == "/health":
-        return (200, [], b"OK\n")
+    if request.path == "/health":
+        # Return HTTP response for health checks
+        return (
+            200,
+            [("Content-Type", "text/plain")],
+            b"OK\n"
+        )
+    # Return None to let WebSocket handle the connection
     return None
-
 # ========================================
 # START SERVER
 # ========================================
@@ -244,22 +252,20 @@ async def main():
     print(f"🔗 Node.js API endpoint: {NODE_API}")
     print("⏳ Waiting for connections...\n")
     
-    # Create WebSocket server with proper configuration
     server = await websockets.serve(
         handle_client,
         "0.0.0.0",
         WEBSOCKET_PORT,
         max_size=2_000_000,
-        ping_interval=30,
+        ping_interval=20,
         ping_timeout=10,
-        process_request=health_check,  # Health check endpoint
-        compression=None  # Disable compression for compatibility
+        process_request=health_check,
+        compression=None,
     )
     
     print(f"✅ Server started successfully on port {WEBSOCKET_PORT}")
     print(f"🔍 Health check available at: http://0.0.0.0:{WEBSOCKET_PORT}/health")
     
-    # Keep server running
     await asyncio.Future()
 
 if __name__ == "__main__":
