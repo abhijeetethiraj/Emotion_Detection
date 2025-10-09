@@ -222,25 +222,10 @@ async def handle_client(websocket):
     finally:
         print(f"🔌 Connection closed: {client_ip}")
 
+
 # ========================================
-# HEALTH CHECK ENDPOINT (HTTP)
-# ========================================
-# ========================================
-# HEALTH CHECK ENDPOINT (HTTP)
-# ========================================
-async def health_check(connection, request):
-    """
-    HTTP health check handler for Render (handles GET and HEAD)
-    """
-    if request.path == "/health":
-        # Return HTTP response for health checks
-        return (
-            200,
-            [("Content-Type", "text/plain")],
-            b"OK\n"
-        )
-    # Return None to let WebSocket handle the connection
-    return None
+
+
 # ========================================
 # START SERVER
 # ========================================
@@ -252,19 +237,24 @@ async def main():
     print(f"🔗 Node.js API endpoint: {NODE_API}")
     print("⏳ Waiting for connections...\n")
     
+    # Start HTTP health check server
+    await start_http_server()
+    print(f"✅ HTTP health check server started on port {WEBSOCKET_PORT}")
+    print(f"🔍 Health check available at: http://0.0.0.0:{WEBSOCKET_PORT}/health")
+    
+    # Start WebSocket server on different port
+    ws_port = WEBSOCKET_PORT + 1
     server = await websockets.serve(
         handle_client,
         "0.0.0.0",
-        WEBSOCKET_PORT,
+        ws_port,
         max_size=2_000_000,
         ping_interval=20,
         ping_timeout=10,
-        process_request=health_check,
         compression=None,
     )
     
-    print(f"✅ Server started successfully on port {WEBSOCKET_PORT}")
-    print(f"🔍 Health check available at: http://0.0.0.0:{WEBSOCKET_PORT}/health")
+    print(f"✅ WebSocket server started on port {ws_port}")
     
     await asyncio.Future()
 
