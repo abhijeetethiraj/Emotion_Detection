@@ -1,13 +1,15 @@
 """
-Simple Emotion Detection - Sends data to Node.js backend
-Run: python emotion_detector.py
+Emotion Detection WebSocket Server - Fixed for Render Deployment
 """
 
 import asyncio
 import websockets
 import cv2
 import numpy as np
-from tensorflow.keras.models import load_model
+try:
+    from tensorflow.keras.models import load_model
+except ImportError:
+    from keras.models import load_model
 import base64
 import json
 from PIL import Image
@@ -15,16 +17,18 @@ from io import BytesIO
 import requests
 from datetime import datetime
 from pathlib import Path
-
-# ========================================
-# CONFIGURATION - CHANGE THESE
-# ========================================
 import os
 
+# ========================================
+# CONFIGURATION
+# ========================================
 WEBSOCKET_PORT = int(os.environ.get('PORT', 8765))
 NODE_API = "https://emotion-detection2.onrender.com/api/emotions/save"
-ROOT_DIR = Path(__file__).resolve().parent.parent
-MODEL_PATH = ROOT_DIR / 'models' / 'engagement_cnn.h5'
+
+# Get the base directory (ml_server folder)
+BASE_DIR = Path(__file__).resolve().parent
+MODEL_PATH = BASE_DIR / 'models' / 'engagement_cnn.h5'
+
 CLASS_LABELS = ['Bored', 'Confused', 'Interested']
 
 # ========================================
@@ -34,9 +38,9 @@ print("Loading emotion detection model...")
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 POSSIBLE_PATHS = [
-    str(MODEL_PATH),
-    os.path.join(SCRIPT_DIR, 'engagement_cnn.h5'),
-    os.path.join(SCRIPT_DIR, '..', 'models', 'engagement_cnn.h5'),
+    str(MODEL_PATH),  # ml_server/models/engagement_cnn.h5
+    os.path.join(SCRIPT_DIR, 'models', 'engagement_cnn.h5'),  # Same as above
+    os.path.join(SCRIPT_DIR, 'engagement_cnn.h5'),  # ml_server/engagement_cnn.h5
 ]
 
 model_path = None
@@ -125,7 +129,6 @@ def detect_emotion(base64_string):
 def save_to_nodejs(user_id, email, emotion_data):
     """
     Sends emotion data to Node.js backend via HTTP POST
-    Node.js will save it to MongoDB
     """
     try:
         payload = {
@@ -158,9 +161,9 @@ async def handle_client(websocket):
     Receives video frames from React app
     Processes emotion detection
     Sends result back to React
-    Saves to Node.js/MongoDB
     """
-    print(f"✅ Client connected: {websocket.remote_address}")
+    client_ip = websocket.remote_address[0] if websocket.remote_address else "unknown"
+    print(f"✅ Client connected: {client_ip}")
     
     try:
         async for message in websocket:
@@ -206,16 +209,29 @@ async def handle_client(websocket):
                     "error": "Invalid JSON"
                 }))
             except Exception as e:
-                print(f"❌ Error: {e}")
+                print(f"❌ Error processing request: {e}")
                 await websocket.send(json.dumps({
                     "success": False,
                     "error": str(e)
                 }))
     
     except websockets.exceptions.ConnectionClosed:
-        print("⚠️ Client disconnected")
+        print(f"⚠️ Client disconnected: {client_ip}")
+    except Exception as e:
+        print(f"❌ Connection error: {e}")
     finally:
-        print(f"🔌 Connection closed: {websocket.remote_address}")
+        print(f"🔌 Connection closed: {client_ip}")
+
+# ========================================
+# HEALTH CHECK ENDPOINT (HTTP)
+# ========================================
+async def health_check(path, request_headers):
+    """
+    Simple HTTP health check for Render
+    """
+    if path == "/health":
+        return (200, [], b"OK\n")
+    return None
 
 # ========================================
 # START SERVER
@@ -224,12 +240,27 @@ async def main():
     print("="*60)
     print("  Engagement Detection WebSocket Server")
     print("="*60)
-    print(f"📡 WebSocket listening on: ws://localhost:{WEBSOCKET_PORT}")
+    print(f"📡 WebSocket listening on: 0.0.0.0:{WEBSOCKET_PORT}")
     print(f"🔗 Node.js API endpoint: {NODE_API}")
     print("⏳ Waiting for connections...\n")
     
-    async with websockets.serve(handle_client, "0.0.0.0", WEBSOCKET_PORT, max_size=2_000_000):
-        await asyncio.Future()
+    # Create WebSocket server with proper configuration
+    server = await websockets.serve(
+        handle_client,
+        "0.0.0.0",
+        WEBSOCKET_PORT,
+        max_size=2_000_000,
+        ping_interval=30,
+        ping_timeout=10,
+        process_request=health_check,  # Health check endpoint
+        compression=None  # Disable compression for compatibility
+    )
+    
+    print(f"✅ Server started successfully on port {WEBSOCKET_PORT}")
+    print(f"🔍 Health check available at: http://0.0.0.0:{WEBSOCKET_PORT}/health")
+    
+    # Keep server running
+    await asyncio.Future()
 
 if __name__ == "__main__":
     try:
@@ -238,3 +269,5 @@ if __name__ == "__main__":
         print("\n⛔ Server stopped by user")
     except Exception as e:
         print(f"❌ Server error: {e}")
+        import traceback
+        traceback.print_exc()

@@ -189,116 +189,130 @@ const VideoApp = () => {
   }, []);
 
   // Effect for WebSocket connection and frame sending
+  // Replace the WebSocket connection useEffect with this fixed version:
+
   useEffect(() => {
-    if (joined && localTracksRef.current.videoTrack) {
-      console.log("Connecting to Python WebSocket server...");
-      ws.current = new WebSocket("wss://emotion-detection3.onrender.com");
+    if (joined && localTracksRef.current.videoTrack && user) {
+      console.log("🔌 Connecting to Python WebSocket server...");
+      console.log("👤 User data:", { id: user._id, email: user.email });
+
+      // Use the correct WebSocket URL based on environment
+      const WS_URL =
+        import.meta.env.VITE_PYTHON_WS_URL || "ws://localhost:8765";
+
+      ws.current = new WebSocket(WS_URL);
 
       ws.current.onopen = () => {
-        console.log("✓ Connected to Python emotion server");
+        console.log("✅ Connected to Python emotion server");
+        // Start sending frames every 2 seconds
         emotionIntervalRef.current = setInterval(sendFrameToServer, 2000);
       };
 
       ws.current.onmessage = (event) => {
-        console.log("Received from Python:", event.data);
+        console.log("📨 Received from Python:", event.data);
         try {
           const data = JSON.parse(event.data);
-          if (data.success) {
+          if (data.success && data.face_detected) {
             setEmotionData({
               emotion: data.emotion,
               confidence: data.confidence,
             });
             console.log(
-              "Emotion detected:",
-              data.emotion,
-              data.confidence + "%"
+              `😊 Emotion detected: ${data.emotion} (${data.confidence.toFixed(
+                1
+              )}%)`
             );
+          } else if (!data.face_detected) {
+            console.log("⚠️ No face detected in frame");
+            setEmotionData({ emotion: "N/A", confidence: 0 });
           } else {
-            console.error("Python error:", data.error);
+            console.error("❌ Python error:", data.error);
           }
         } catch (err) {
-          console.error("Failed to parse response:", err);
+          console.error("❌ Failed to parse response:", err);
         }
       };
 
       ws.current.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        alert(
-          "Cannot connect to emotion detection server. Make sure Python script is running."
-        );
+        console.error("❌ WebSocket error:", error);
+        console.error("Make sure Python server is running on:", WS_URL);
       };
 
-      ws.current.onclose = () => {
-        console.log("Disconnected from Python server");
+      ws.current.onclose = (event) => {
+        console.log("🔌 Disconnected from Python server");
+        console.log("Close code:", event.code, "Reason:", event.reason);
+        clearInterval(emotionIntervalRef.current);
       };
     }
 
     return () => {
-      clearInterval(emotionIntervalRef.current);
-      ws.current?.close();
+      if (emotionIntervalRef.current) {
+        clearInterval(emotionIntervalRef.current);
+      }
+      if (ws.current) {
+        ws.current.close();
+      }
     };
-  }, [joined, user]); // Add 'user' dependency
+  }, [joined, user]); // Important: include 'user' in dependencies
 
-  // Function to capture and send a video frame
-  // In VideoApp component, update sendFrameToServer:
+  // Updated sendFrameToServer function:
   const sendFrameToServer = () => {
-    console.log("🔍 Debug Info:", {
-      wsState: ws.current?.readyState,
-      hasVideoTrack: !!localTracksRef.current.videoTrack,
-      userId: user?._id,
-      userEmail: user?.email,
-      userObject: user,
-    });
-
+    // Check WebSocket connection
     if (ws.current?.readyState !== WebSocket.OPEN) {
-      console.log("❌ WebSocket not open. State:", ws.current?.readyState);
+      console.warn("⚠️ WebSocket not open. State:", ws.current?.readyState);
       return;
     }
 
+    // Check video track
     if (!localTracksRef.current.videoTrack) {
-      console.log("❌ No video track available");
+      console.warn("⚠️ No video track available");
       return;
     }
 
+    // Check user data
     if (!user?._id && !user?.email) {
-      console.log("⚠️ WARNING: No user ID or email available!");
-    }
-
-    if (
-      ws.current?.readyState !== WebSocket.OPEN ||
-      !localTracksRef.current.videoTrack
-    ) {
-      console.log("❌ Cannot send: WebSocket not ready");
+      console.error("❌ No user data available!");
+      console.log("User object:", user);
       return;
     }
 
     const canvas = canvasRef.current;
-    const mediaStreamTrack =
-      localTracksRef.current.videoTrack.getMediaStreamTrack();
+    if (!canvas) {
+      console.error("❌ Canvas not found");
+      return;
+    }
 
-    const imageCapture = new ImageCapture(mediaStreamTrack);
+    try {
+      const mediaStreamTrack =
+        localTracksRef.current.videoTrack.getMediaStreamTrack();
+      const imageCapture = new ImageCapture(mediaStreamTrack);
 
-    imageCapture
-      .grabFrame()
-      .then((imageBitmap) => {
-        if (canvas) {
+      imageCapture
+        .grabFrame()
+        .then((imageBitmap) => {
           canvas.width = imageBitmap.width;
           canvas.height = imageBitmap.height;
           canvas.getContext("2d").drawImage(imageBitmap, 0, 0);
-          const imageData = canvas.toDataURL("image/jpeg", 0.5);
 
-          // ✅ FIXED: Send as JSON with userId
+          // Convert to base64 JPEG (compressed)
+          const imageData = canvas.toDataURL("image/jpeg", 0.6);
+
+          // Prepare payload
           const payload = {
-            userId: user?._id || "test_user_123",
-            email: user?.email || "test@example.com",
+            userId: user._id || "unknown",
+            email: user.email || "unknown@example.com",
             image: imageData,
           };
 
-          console.log("📤 Sending frame with userId:", payload.userId);
-          ws.current.send(JSON.stringify(payload)); // ✅ Convert to JSON string
-        }
-      })
-      .catch((error) => console.error("Error grabbing frame:", error));
+          console.log("📤 Sending frame - User:", payload.userId);
+          ws.current.send(JSON.stringify(payload));
+        })
+        .catch((error) => {
+          console.error("❌ Error grabbing frame:", error);
+        });
+    } catch (error) {
+      console.error("❌ Error in sendFrameToServer:", error);
+    }
   };
 
   const joinRoom = async () => {
