@@ -199,9 +199,7 @@ const VideoApp = () => {
       // Use the correct WebSocket URL based on environment
       const WS_URL =
         import.meta.env.VITE_PYTHON_WS_URL ||
-        (import.meta.env.MODE === "production"
-          ? "wss://your-render-service.onrender.com/ws"
-          : "ws://localhost:8765/ws");
+        import.meta.env.MODE === "production";
       ws.current = new WebSocket(WS_URL);
 
       ws.current.onopen = () => {
