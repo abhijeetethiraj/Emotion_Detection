@@ -4,11 +4,16 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: "cd ml_server && pip install --upgrade pip && pip install -r requirements.txt"
-    startCommand: "cd ml_server && python emotion_detector.py"
+    buildCommand: |
+      cd ml_server
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: |
+      cd ml_server
+      python emotion_dashboard.py
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
         value: "3.11"
       - key: PORT
-        sync: false
+        value: "10000"
