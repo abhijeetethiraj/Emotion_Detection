@@ -196,10 +196,9 @@ const VideoApp = () => {
       console.log("🔌 Connecting to Python WebSocket server...");
       console.log("👤 User data:", { id: user._id, email: user.email });
 
-      // Use the correct WebSocket URL based on environment
       const WS_URL =
         import.meta.env.VITE_PYTHON_WS_URL ||
-        import.meta.env.MODE === "production";
+        "wss://emotion-detection4.onrender.com";
       ws.current = new WebSocket(WS_URL);
 
       ws.current.onopen = () => {
