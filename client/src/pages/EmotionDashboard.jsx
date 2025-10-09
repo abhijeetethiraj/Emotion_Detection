@@ -36,7 +36,7 @@ const EmotionDashboard = () => {
   const { user, setShowLogin } = useContext(Appcontext);
   const navigate = useNavigate();
 
-  const API_BASE = "http://localhost:4000/api/emotions";
+  const API_BASE = "https://emotion-detection2.onrender.com/api/emotions";
 
   useEffect(() => {
     fetchUsers();
