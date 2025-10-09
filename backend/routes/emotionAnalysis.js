@@ -5,7 +5,7 @@ const { MongoClient } = require('mongodb');
 // ==========================================
 // MONGODB CONNECTION
 // ==========================================
-const MONGO_URI = "mongodb+srv://abhijeetethiraj:sakec@cluster0.kalfkcu.mongodb.net/";
+const MONGO_URI = "mongodb+srv://abhijeetethiraj:sakec@cluster0.kalfkcu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 const DB_NAME = "emotion_detection_db";
 
 let db;
