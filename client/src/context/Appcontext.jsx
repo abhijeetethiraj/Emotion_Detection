@@ -15,8 +15,8 @@ const AppcontextProvider = ({ children }) => {
     localStorage.removeItem("token");
     setToken("");
     setUser(null);
+    window.location.href = "/"; // Add this line
   };
-
   // Verify token and fetch user on mount
   useEffect(() => {
     const verifyToken = async () => {

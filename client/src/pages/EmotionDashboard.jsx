@@ -20,8 +20,8 @@ import { Appcontext } from "../context/Appcontext";
 
 const EMOTION_COLORS = {
   Interested: "#10B981",
-  confused: "#14B8A6",
-  bored: "#EF4444",
+  Confused: "#14B8A6",
+  Bored: "#EF4444",
 };
 
 const EmotionDashboard = () => {
@@ -38,9 +38,18 @@ const EmotionDashboard = () => {
 
   const API_BASE = "https://emotion-detection2.onrender.com/api/emotions";
 
+  // Check authentication ONCE on mount
   useEffect(() => {
-    fetchUsers();
+    if (!user) {
+      navigate("/");
+      setShowLogin(true);
+    } else {
+      fetchUsers();
+    }
   }, []);
+
+  // If no user, don't render anything
+  if (!user) return null;
 
   useEffect(() => {
     if (selectedUserId) fetchUserData();

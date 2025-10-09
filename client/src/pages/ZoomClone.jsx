@@ -173,13 +173,13 @@ const ZoomClone = () => {
                 Ready to start your day?
               </p>
             </div>
-            <a
-              href="/emotion" // Use a placeholder link
+            <button
+              onClick={() => navigate("/emotion")}
               className="mt-4 sm:mt-0 flex items-center justify-center px-5 py-3 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg shadow-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-150"
             >
               <ChartBarIcon />
               View Analytics
-            </a>
+            </button>
           </div>
 
           {/* --- Primary Action Cards --- */}
