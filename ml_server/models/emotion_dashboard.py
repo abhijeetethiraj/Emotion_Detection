@@ -21,8 +21,8 @@ from pathlib import Path
 # ========================================
 import os
 
-WEBSOCKET_PORT = 8765
-NODE_API = "http://localhost:4000/api/emotions/save"
+WEBSOCKET_PORT = int(os.environ.get('PORT', 8765))
+NODE_API = "https://emotion-detection2.onrender.com/api/emotions/save"
 ROOT_DIR = Path(__file__).resolve().parent.parent
 MODEL_PATH = ROOT_DIR / 'models' / 'engagement_cnn.h5'
 CLASS_LABELS = ['Bored', 'Confused', 'Interested']
@@ -228,7 +228,7 @@ async def main():
     print(f"🔗 Node.js API endpoint: {NODE_API}")
     print("⏳ Waiting for connections...\n")
     
-    async with websockets.serve(handle_client, "localhost", WEBSOCKET_PORT, max_size=2_000_000):
+    async with websockets.serve(handle_client, "0.0.0.0", WEBSOCKET_PORT, max_size=2_000_000):
         await asyncio.Future()
 
 if __name__ == "__main__":
