@@ -11,12 +11,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 import os
 import requests
-from aiohttp import web
 
 # ========================================
 # CONFIGURATION
 # ========================================
-PORT = int(os.environ.get("PORT", 8765))  # Render assigns this automatically
+PORT = int(os.environ.get("PORT", 8765))
 NODE_API = "https://emotion-detection2.onrender.com/api/emotions/save"
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -95,7 +94,7 @@ def save_to_nodejs(user_id, email, emotion_data):
 # ========================================
 # WEBSOCKET HANDLER
 # ========================================
-async def handle_client(websocket, path):
+async def handle_client(websocket):
     client_ip = websocket.remote_address[0] if websocket.remote_address else "unknown"
     print(f"✅ Client connected: {client_ip}")
     try:
@@ -132,24 +131,13 @@ async def handle_client(websocket, path):
         print(f"⚠️ Client disconnected: {client_ip}")
 
 # ========================================
-# HTTP + WebSocket (single Render port)
+# WebSocket Server Only
 # ========================================
-async def health_check(request):
-    return web.Response(text="WebSocket server is running!")
-
 async def main():
-    # Start HTTP server for health check
-    app = web.Application()
-    app.router.add_get("/", health_check)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", PORT)
-    await site.start()
-    print(f"🌐 HTTP health check + WebSocket on port {PORT}")
-
-    # Start WebSocket server on same port
+    print(f"🌐 Starting WebSocket server on port {PORT}")
     async with websockets.serve(handle_client, "0.0.0.0", PORT):
-        await asyncio.Future()  # run forever
+        print(f"✅ WebSocket server running on ws://0.0.0.0:{PORT}")
+        await asyncio.Future()
 
 if __name__ == "__main__":
     try:
