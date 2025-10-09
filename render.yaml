@@ -8,10 +8,8 @@ services:
       cd ml_server
       pip install --upgrade pip
       pip install -r requirements.txt
-    startCommand: |
-      cd ml_server
-      python emotion_dashboard.py
-    healthCheckPath: /health
+    startCommand: python ml_server/emotion_dashboard.py
+    healthCheckPath: /
     envVars:
       - key: PYTHON_VERSION
         value: "3.11"
