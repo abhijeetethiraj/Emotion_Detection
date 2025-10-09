@@ -192,7 +192,7 @@ const VideoApp = () => {
   useEffect(() => {
     if (joined && localTracksRef.current.videoTrack) {
       console.log("Connecting to Python WebSocket server...");
-      ws.current = new WebSocket("https://emotion-detection3.onrender.com");
+      ws.current = new WebSocket("wss://emotion-detection3.onrender.com");
 
       ws.current.onopen = () => {
         console.log("✓ Connected to Python emotion server");
