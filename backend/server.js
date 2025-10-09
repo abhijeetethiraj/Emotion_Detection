@@ -13,7 +13,7 @@ app.use(cors())
 app.use(express.json());
 connectDB()
 
-const Port = process.env.PORT || 3000; 
+const Port = process.env.PORT || 4000; 
 app.get('/',(req,res)=>{
     res.send("'Hello from your local server!'")
 })
